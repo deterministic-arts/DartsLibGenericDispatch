@@ -10,6 +10,28 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+/**
+ * A bi-function, that can be extended at run-time. This class is modelled
+ * after "generic functions", a concept found in languages like <a href="http://www.lispworks.com/documentation/lw70/CLHS/Body/07_f.htm">Common Lisp</a>
+ * or <a href="https://opendylan.org/books/drm/Functions_Overview#HEADING-48-7">Dylan</a>.
+ * Generic functions dispatch to the concrete implementations at run-time based
+ * on the dynamic type of the arguments; all arguments are considered, when trying
+ * to find an implementation handling the given combination of arguments.
+ *
+ * <p>New behaviour is added to a generic function in the form of "methods",
+ * which can either be {@linkplain LeafMethod leaf methods} (i.e., do not call less
+ * specific variants), or {@linkplain InnerMethod inner methods}, which may delegate
+ * part of the work to less specific variants.
+ *
+ * @implNote The implementation maintains a cache of sorted applicable methods
+ * for each combination of actual argument classes encountered, which is computed
+ * when a particular combination is seen for the first time. This cache needs to
+ * be purged, whenever the set of registered methods is changed. For this reason,
+ * a program should register all methods first, before invoking the function, and
+ * should avoid adding methods later, as that can degrade performance.
+ *
+ * @param <R> type of the function's result
+ */
 @SuppressWarnings({"Duplicates","rawtypes","unchecked"})
 public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> {
 
@@ -17,11 +39,47 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
     private final Map<Signature,Invoker> cache;
     private final Map<Signature,Entry> methods;
 
+    /**
+     * Constructs a new instance of this class. The given string {@code fn}
+     * is used as a symbolic function name. It is used only by {@link #toString()},
+     * and has no significance otherwise. It may not be null.
+     *
+     * @param fn symbolic function name
+     */
+
     public GenericBiFunction(String fn) {
         name = Objects.requireNonNull(fn);
         cache = new HashMap<>();
         methods = new HashMap<>();
     }
+
+    /**
+     * Invoke this function with the given arguments. When called, searches
+     * among all registered methods for those, which are applicable to the
+     * given arguments, i.e., whose argument classes indicate, that they can
+     * be called with the given values. It then sorts those methods such,
+     * that the most specific method (the method, whose argument classes are
+     * closest to the dynamic types of the arguments) are first, followed
+     * by less specific classes. It then invokes that method, passing the
+     * argument values along, and returns, whatever the method returns.
+     *
+     * @param arg1 first argument to pass to methods
+     * @param arg2 second argument to pass to methods
+     *
+     * @return whatever the effective method returns
+     *
+     * @throws AmbiguousMethodsException if there are multiple methods, which
+     *         might potentially handle the combination of input arguments,
+     *         and none of them is more specific than all others.
+     *
+     * @throws MissingMethodException if there is no applicable method for
+     *         the given combination of arguments at all registered on this
+     *         generic function.
+     *
+     * @throws NoMoreMethodsException if an inner methods wanted to invoke
+     *         its next less specific variant, and there was no less specific
+     *         variant to invoke.
+     */
 
     public R apply(Object arg1, Object arg2) {
         final Signature key = new Signature(arg1.getClass(), arg2.getClass());
@@ -37,6 +95,16 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
         return "GenericBiFunction(" + name + ")";
     }
 
+    /**
+     * Adds {@code method} to this generic function, and declares it applicable
+     * for arguments, whose dynamic types are compatible with classes {@code c1}
+     * and {@code c2}.
+     *
+     * @param c1 type of accepted values for the first argument
+     * @param c2 type of accepted values for the second argument
+     * @param method function to invoke
+     */
+
     public <A1,A2> void addMethod(Class<A1> c1, Class<A2> c2, LeafMethod<? super A1, ? super A2, ? extends R> method) {
         final Signature key = new Signature(c1, c2);
         synchronized (cache) {
@@ -48,6 +116,21 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
             }
         }
     }
+
+    /**
+     * Adds {@code method} to this generic function, and declares it applicable
+     * for arguments, whose dynamic types are compatible with classes {@code c1}
+     * and {@code c2}.
+     *
+     * <p>The method function {@code method} may require to invoke the next
+     * specific method to perform parts of the work. It can do so by calling
+     * {@link NextMethod#next() next()} on the specially provided first argument.
+     * If no further methods are available, this will raise an {@link NoMoreMethodsException}.
+     *
+     * @param c1 type of accepted values for the second argument
+     * @param c2 type of accepted values for the third argument
+     * @param method function to invoke
+     */
 
     public <A1,A2> void addMethod(Class<A1> c1, Class<A2> c2, InnerMethod<? super A1, ? super A2, ? extends R> method) {
         final Signature key = new Signature(c1, c2);
@@ -61,7 +144,21 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
         }
     }
 
+    /**
+     * Represents the next "less specific" method in an invocation
+     * of an inner method.
+     */
+
     public interface NextMethod<R> {
+
+        /**
+         * Invokes the next less specific method. The method receives the
+         * same arguments as the calling method does; this happens automatically,
+         * and hence, this function does not take any arguments.
+         *
+         * @return the result of the invocation
+         */
+
         R next();
     }
 
