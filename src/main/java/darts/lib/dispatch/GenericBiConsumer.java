@@ -1,6 +1,5 @@
 package darts.lib.dispatch;
 
-import com.google.common.collect.ImmutableList;
 import darts.lib.dispatch.error.AmbiguousMethodsException;
 import darts.lib.dispatch.error.MissingMethodException;
 import darts.lib.dispatch.error.NoMoreMethodsException;
