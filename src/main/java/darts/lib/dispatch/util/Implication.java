@@ -16,9 +16,9 @@ public final class Implication<E> {
         this.test = test;
     }
 
-    public Collection<E> dominators(Collection<? extends E> candidates) {
+    public Collection<E> dominators(Collection<E> candidates) {
 
-        final Iterator<? extends E> iter = candidates.iterator();
+        final Iterator<E> iter = candidates.iterator();
 
         if( !iter.hasNext() ) return Collections.emptySet();
         else {
@@ -60,7 +60,7 @@ public final class Implication<E> {
         }
     }
 
-    public List<Collection<E>> layers(Collection<? extends E> input) {
+    public List<Collection<E>> layers(Collection<E> input) {
 
         final Collection<E> candidates = new ArrayList<>(input);
         final ArrayList<Collection<E>> result = new ArrayList<>();
