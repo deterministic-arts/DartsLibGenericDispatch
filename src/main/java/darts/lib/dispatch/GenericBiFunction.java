@@ -35,8 +35,8 @@ import java.util.stream.Collectors;
 public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> {
 
     private final String name;
-    private final Map<Signature,Invoker> cache;
-    private final Map<Signature,Entry> methods;
+    private final Map<BinarySignature,Invoker> cache;
+    private final Map<BinarySignature,Entry> methods;
 
     /**
      * Constructs a new instance of this class. The given string {@code fn}
@@ -81,7 +81,7 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
      */
 
     public R apply(Object arg1, Object arg2) {
-        final Signature key = new Signature(arg1.getClass(), arg2.getClass());
+        final BinarySignature key = new BinarySignature(arg1.getClass(), arg2.getClass());
         final Invoker em;
         synchronized (cache) {
             em = cache.computeIfAbsent(key, this::computeEffectiveMethod);
@@ -105,7 +105,7 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
      */
 
     public <A1,A2> void addMethod(Class<A1> c1, Class<A2> c2, LeafMethod<? super A1, ? super A2, ? extends R> method) {
-        final Signature key = new Signature(c1, c2);
+        final BinarySignature key = new BinarySignature(c1, c2);
         synchronized (cache) {
             cache.clear();
             if (methods.containsKey(key)) throw new IllegalStateException();
@@ -132,7 +132,7 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
      */
 
     public <A1,A2> void addMethod(Class<A1> c1, Class<A2> c2, InnerMethod<? super A1, ? super A2, ? extends R> method) {
-        final Signature key = new Signature(c1, c2);
+        final BinarySignature key = new BinarySignature(c1, c2);
         synchronized (cache) {
             cache.clear();
             if (methods.containsKey(key)) throw new IllegalStateException();
@@ -173,38 +173,7 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
 
     private static final Implication<Entry> implication = new Implication<>(Entry::implies);
 
-    public static final class Signature {
-
-        private final Class<?> argument1;
-        private final Class<?> argument2;
-
-        Signature(Class<?> argument1, Class<?> argument2) {
-            this.argument1 = argument1;
-            this.argument2 = argument2;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == this) return true;
-            else if (!(o instanceof Signature)) return false;
-            else {
-                final Signature s = (Signature) o;
-                return argument1 == s.argument1 && argument2 == s.argument2;
-            }
-        }
-
-        @Override
-        public int hashCode() {
-            return argument1.hashCode() * 31 + argument2.hashCode();
-        }
-
-        public boolean implies(Signature s) {
-            return s.argument1.isAssignableFrom(argument1)
-                && s.argument2.isAssignableFrom(argument2);
-        }
-    }
-
-    private Invoker computeEffectiveMethod(Signature sig) {
+    private Invoker computeEffectiveMethod(BinarySignature sig) {
 
         final List<Entry> candidates = methods
             .values()
@@ -212,7 +181,7 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
             .filter(e -> e.accepts(sig))
             .collect(Collectors.toList());
 
-        if (candidates.isEmpty()) return missing(sig);
+        if (candidates.isEmpty()) return missing;
         else {
 
             final List<Collection<Entry>> layers = implication.layers(candidates);
@@ -226,7 +195,7 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
                 switch (here.size()) {
                     case 0: throw new AssertionError();
                     case 1: seed = here.iterator().next().bind(seed); break;
-                    default: seed = ambiguous(sig, here); break;
+                    default: seed = ambiguous(here); break;
                 }
             }
 
@@ -242,13 +211,11 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
         throw new NoMoreMethodsException(GenericBiFunction.this, ImmutableList.of(arg1, arg2));
     };
 
-    private Invoker missing(Signature s) {
-        return (arg1, arg2) -> {
-            throw new MissingMethodException(GenericBiFunction.this, ImmutableList.of(arg1, arg2));
-        };
-    }
+    private final Invoker missing = (arg1, arg2) -> {
+        throw new MissingMethodException(GenericBiFunction.this, ImmutableList.of(arg1, arg2));
+    };
 
-    private Invoker ambiguous(Signature s, Collection<Entry> cs) {
+    private Invoker ambiguous(Collection<Entry> cs) {
         return (arg1, arg2) -> {
             throw new AmbiguousMethodsException(GenericBiFunction.this, ImmutableList.of(arg1, arg2), ImmutableList.copyOf(cs));
         };
@@ -256,9 +223,9 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
 
     private static abstract class Entry {
 
-        final Signature key;
+        final BinarySignature key;
 
-        Entry(Signature key) {
+        Entry(BinarySignature key) {
             this.key = key;
         }
 
@@ -266,7 +233,7 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
             return key.implies(e.key);
         }
 
-        boolean accepts(Signature s) {
+        boolean accepts(BinarySignature s) {
             return s.implies(key);
         }
 
@@ -282,7 +249,7 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
 
         final LeafMethod method;
 
-        Leaf(Signature key, LeafMethod method) {
+        Leaf(BinarySignature key, LeafMethod method) {
             super(key);
             this.method = method;
         }
@@ -302,7 +269,7 @@ public final class GenericBiFunction<R> implements BiFunction<Object, Object,R> 
 
         final InnerMethod method;
 
-        private Inner(Signature key, InnerMethod method) {
+        private Inner(BinarySignature key, InnerMethod method) {
             super(key);
             this.method = method;
         }

@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
 public class GenericBiConsumer implements BiConsumer<Object, Object> {
 
     private final String name;
-    private final Map<Signature, Invoker> cache;
-    private final Map<Signature, Entry> methods;
+    private final Map<BinarySignature, Invoker> cache;
+    private final Map<BinarySignature, Entry> methods;
 
     public GenericBiConsumer(String fn) {
         name = Objects.requireNonNull(fn);
@@ -23,7 +23,7 @@ public class GenericBiConsumer implements BiConsumer<Object, Object> {
     }
 
     public void accept(Object arg1, Object arg2) {
-        final Signature key = new Signature(arg1.getClass(), arg2.getClass());
+        final BinarySignature key = new BinarySignature(arg1.getClass(), arg2.getClass());
         final Invoker em;
         synchronized (cache) {
             em = cache.computeIfAbsent(key, this::computeEffectiveMethod);
@@ -37,7 +37,7 @@ public class GenericBiConsumer implements BiConsumer<Object, Object> {
     }
 
     public <A1,A2> void addMethod(Class<A1> c1, Class<A2> c2, LeafMethod<? super A1, ? super A2> method) {
-        final Signature key = new Signature(c1, c2);
+        final BinarySignature key = new BinarySignature(c1, c2);
         synchronized (cache) {
             cache.clear();
             if (methods.containsKey(key)) throw new IllegalStateException();
@@ -49,7 +49,7 @@ public class GenericBiConsumer implements BiConsumer<Object, Object> {
     }
 
     public <A1,A2> void addMethod(Class<A1> c1, Class<A2> c2, InnerMethod<? super A1, ? super A2> method) {
-        final Signature key = new Signature(c1, c2);
+        final BinarySignature key = new BinarySignature(c1, c2);
         synchronized (cache) {
             cache.clear();
             if (methods.containsKey(key)) throw new IllegalStateException();
@@ -76,38 +76,7 @@ public class GenericBiConsumer implements BiConsumer<Object, Object> {
 
     private static final Implication<Entry> implication = new Implication<>(Entry::implies);
 
-    public static final class Signature {
-
-        private final Class<?> argument1;
-        private final Class<?> argument2;
-
-        Signature(Class<?> argument1, Class<?> argument2) {
-            this.argument1 = argument1;
-            this.argument2 = argument2;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == this) return true;
-            else if (!(o instanceof Signature)) return false;
-            else {
-                final Signature s = (Signature) o;
-                return argument1 == s.argument1 && argument2 == s.argument2;
-            }
-        }
-
-        @Override
-        public int hashCode() {
-            return argument1.hashCode() * 31 + argument2.hashCode();
-        }
-
-        public boolean implies(Signature s) {
-            return s.argument1.isAssignableFrom(argument1)
-                && s.argument2.isAssignableFrom(argument2);
-        }
-    }
-
-    private Invoker computeEffectiveMethod(Signature sig) {
+    private Invoker computeEffectiveMethod(BinarySignature sig) {
 
         final List<Entry> candidates = methods
             .values()
@@ -145,13 +114,13 @@ public class GenericBiConsumer implements BiConsumer<Object, Object> {
         throw new NoMoreMethodsException(GenericBiConsumer.this, ImmutableList.of(arg1, arg2));
     };
 
-    private Invoker missing(Signature s) {
+    private Invoker missing(BinarySignature s) {
         return (arg1, arg2) -> {
             throw new MissingMethodException(this, ImmutableList.of(arg1, arg2));
         };
     }
 
-    private Invoker ambiguous(Signature s, Collection<Entry> cs) {
+    private Invoker ambiguous(BinarySignature s, Collection<Entry> cs) {
         return (arg1, arg2) -> {
             throw new AmbiguousMethodsException(this, ImmutableList.of(arg1, arg2), ImmutableList.copyOf(cs));
         };
@@ -159,9 +128,9 @@ public class GenericBiConsumer implements BiConsumer<Object, Object> {
 
     private static abstract class Entry {
 
-        final Signature key;
+        final BinarySignature key;
 
-        Entry(Signature key) {
+        Entry(BinarySignature key) {
             this.key = key;
         }
 
@@ -169,7 +138,7 @@ public class GenericBiConsumer implements BiConsumer<Object, Object> {
             return key.implies(e.key);
         }
 
-        boolean accepts(Signature s) {
+        boolean accepts(BinarySignature s) {
             return s.implies(key);
         }
 
@@ -185,7 +154,7 @@ public class GenericBiConsumer implements BiConsumer<Object, Object> {
 
         final LeafMethod method;
 
-        Leaf(Signature key, LeafMethod method) {
+        Leaf(BinarySignature key, LeafMethod method) {
             super(key);
             this.method = method;
         }
@@ -205,7 +174,7 @@ public class GenericBiConsumer implements BiConsumer<Object, Object> {
 
         final InnerMethod method;
 
-        private Inner(Signature key, InnerMethod method) {
+        private Inner(BinarySignature key, InnerMethod method) {
             super(key);
             this.method = method;
         }

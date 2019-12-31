@@ -34,7 +34,7 @@ public final class GenericPredicate implements Predicate<Object> {
 
     @Override
     public String toString() {
-        return "GenericFunction(" + name + ")";
+        return "GenericPredicate(" + name + ")";
     }
 
     public <A1> void addMethod(Class<A1> key, LeafMethod<? super A1> method) {
