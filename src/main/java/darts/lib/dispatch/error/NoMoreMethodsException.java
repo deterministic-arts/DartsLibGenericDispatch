@@ -4,8 +4,8 @@ import java.util.List;
 
 public class NoMoreMethodsException extends DispatchException {
 
-    private List<Object> arguments;
-    private Object function;
+    private final List<Object> arguments;
+    private final Object function;
 
     public NoMoreMethodsException(Object function, List<Object> arguments) {
         super(String.format("there are no further applicable methods on %s when invoked with %s", function, arguments));

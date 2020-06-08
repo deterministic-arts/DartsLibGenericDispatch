@@ -5,9 +5,9 @@ import java.util.List;
 
 public class AmbiguousMethodsException extends DispatchException {
 
-    private List<Object> arguments;
-    private Object function;
-    private Collection<Object> candidates;
+    private final List<Object> arguments;
+    private final Object function;
+    private final Collection<Object> candidates;
 
     public AmbiguousMethodsException(Object function, List<Object> arguments, Collection<Object> candidates) {
         super(String.format("ambiguous method selection on %s when invoked with %s; candidates are %s", function, arguments, candidates));
