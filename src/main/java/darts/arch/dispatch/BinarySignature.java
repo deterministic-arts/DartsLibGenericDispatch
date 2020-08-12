@@ -1,4 +1,4 @@
-package darts.lib.dispatch;
+package darts.arch.dispatch;
 
 final class BinarySignature {
 

@@ -1,4 +1,4 @@
-package darts.lib.dispatch.util;
+package darts.arch.dispatch.util;
 
 import java.util.*;
 
