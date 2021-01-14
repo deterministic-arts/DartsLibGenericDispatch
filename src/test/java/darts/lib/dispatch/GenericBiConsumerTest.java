@@ -1,6 +1,6 @@
-package darts.arch.dispatch;
+package darts.lib.dispatch;
 
-import darts.arch.dispatch.error.AmbiguousMethodsException;
+import darts.lib.dispatch.error.AmbiguousMethodsException;
 import org.junit.Assert;
 import org.junit.Test;
 

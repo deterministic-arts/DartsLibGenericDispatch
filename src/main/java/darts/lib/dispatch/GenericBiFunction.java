@@ -1,9 +1,9 @@
-package darts.arch.dispatch;
+package darts.lib.dispatch;
 
-import darts.arch.dispatch.error.AmbiguousMethodsException;
-import darts.arch.dispatch.error.MissingMethodException;
-import darts.arch.dispatch.error.NoMoreMethodsException;
-import darts.arch.dispatch.util.Implication;
+import darts.lib.dispatch.error.AmbiguousMethodsException;
+import darts.lib.dispatch.error.MissingMethodException;
+import darts.lib.dispatch.error.NoMoreMethodsException;
+import darts.lib.dispatch.util.Implication;
 
 import java.util.*;
 import java.util.function.BiFunction;

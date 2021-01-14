@@ -1,4 +1,4 @@
-package darts.arch.dispatch;
+package darts.lib.dispatch;
 
 import java.util.AbstractList;
 import java.util.Collection;

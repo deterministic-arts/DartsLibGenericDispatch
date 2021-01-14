@@ -1,4 +1,4 @@
-package darts.arch.dispatch.error;
+package darts.lib.dispatch.error;
 
 import java.util.Collection;
 import java.util.List;
