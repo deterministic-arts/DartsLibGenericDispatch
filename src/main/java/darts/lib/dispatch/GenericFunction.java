@@ -70,7 +70,7 @@ public class GenericFunction<R> implements Function<Object,R> {
 
     @FunctionalInterface
     public interface InnerMethod<A1,R> {
-        R apply(GenericBiFunction.NextMethod<R> next, A1 arg1);
+        R apply(NextMethod<R> next, A1 arg1);
     }
 
     private static final Implication<Entry> implication = new Implication<>(Entry::implies);
